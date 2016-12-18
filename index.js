@@ -13,37 +13,63 @@ javascript:(function(){
 		script.onload = script.onreadystatechange = function(){
 			if (!done && (!this.readyState || this.readyState == "loaded" || this.readyState == "complete")) {
 				done = true;
-				initMyBookmarklet();
+				init();
 			}
 		};
 
 		document.getElementsByTagName("head")[0].appendChild(script);
 	} else {
-		initMyBookmarklet();
+		init();
 	}
 
-  function initMyBookmarklet() {
+  function loadAdServers() {
+    return new Promise((resolve, reject) => {
+      return $.ajax({
+        method: 'GET',
+        url: 'https://afternoon-reef-17770.herokuapp.com/',
+        success: (data) => resolve(JSON.parse(data)),
+        error: (err) => reject(err),
+      });
+    });
+  }
+
+  function populateAdOject(adServers) {
     const aTags = $('a');
 
+    console.log('Searching for ads...');
     for (let i = 0; i < aTags.length; i++) {
       for (let j = 0; j < adServers.length; j++) {
-        if (aTags[i].contains(adServers[i]) && aTags[i].is(":visible")) {
-          const a = aTags[i];
-          const img = a.children('img');
-          const height = img.height();
-          const width = img.width();
-          const position = img.position();
-          const adData = {
-            height,
-            width,
-            position,
-          };
+        const aLink = $(aTags[i]).attr('href');
+  
+        if (typeof aLink === 'string' && aLink.includes(adServers[j]) && $(aTags[i]).is(":visible")) {
+          console.log('Ad found!');
+          const a = $(aTags[i]);
+          const img = $(a.children('img')['context']);
+          
+          if (img) {
+            const height = img.height();
+            const width = img.width();
+            const position = img.position();
+            const adData = {
+              height,
+              width,
+              position,
+            };
 
-          adObj["advertisements"].push(adData);
+            adObj["advertisements"].push(adData);
+          }
         }
       }
     }
+  }
 
-    console.log(JSON.stringify(adObj, null, '  '));
+  function init() {
+    loadAdServers()
+    .then((adServers) => {
+      populateAdOject(adServers);
+      console.log('Completed search for ads.');
+      console.log(JSON.stringify(adObj, null, '  '));
+    })
+    .catch((err) => console.error('Error: ' + err));
   }
 })()
