@@ -62,7 +62,7 @@ javascript:(function() {
     }
 
     //  currently configured to work only with anchor and iframe tag
-    function findAds(adServers, tag) {
+    function findAdsFromTag(adServers, tag) {
         const elements = $(tag);
 
         for (let i = 0; i < elements.length; i += 1) {
@@ -108,8 +108,8 @@ javascript:(function() {
 
     function populateAdObject(adServers) {
         console.log("Searching for ads...");
-        findAds(adServers, "a");
-        findAds(adServers, "iframe");
+        findAdsFromTag(adServers, "a");
+        findAdsFromTag(adServers, "iframe");
     }
 
     function init() {
