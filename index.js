@@ -5,6 +5,7 @@ javascript:(function(){
   adObj['location'] = window.location.href;
   adObj['advertisements'] = [];
 
+  // if jQuery isn't a dependency or if the version is super old then start loading jQuery script
   if (window.jQuery === undefined || window.jQuery.fn.jquery < version) {
     const script = document.createElement('script');
 		let done = false;
@@ -22,7 +23,7 @@ javascript:(function(){
 		init();
 	}
 
-  // makes GET to Heroku server that sends back array of known ad servers
+  // make GET to Heroku server that sends back array of known ad servers
   function loadAdServers() {
     return new Promise((resolve, reject) => {
       return $.ajax({
@@ -49,6 +50,7 @@ javascript:(function(){
         const el = $(elements[i]);
         const elLink = el.is('iframe') ? el.attr('src') : el.attr('href');
 
+        // compares src or href against list of known ad servers
         if (typeof elLink === 'string' && elLink.includes(adServers[j]) && el.is(':visible')) {
           console.log('Found an ad!');
           const img = $(el.children('img')['context']) || '';
@@ -101,6 +103,7 @@ javascript:(function(){
   }
 
   function persistData(adData) {
+    // Firebase doesn't allow these special characters
     const url = adObj['location'].replace(/[.#$[\]/\\]/gi, '');
     const Ads = firebase.database().ref(`/ads/${url}`);
     const newAd = Ads.push();
