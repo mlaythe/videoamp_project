@@ -1,27 +1,28 @@
 javascript:(function(){
   const adObj = {};
-  const version = "1.3.2";
+  const version = '1.3.2';
 
-  adObj["location"] = window.location.href;
-  adObj["advertisements"] = [];
+  adObj['location'] = window.location.href;
+  adObj['advertisements'] = [];
 
   if (window.jQuery === undefined || window.jQuery.fn.jquery < version) {
-    const script = document.createElement("script");
+    const script = document.createElement('script');
 		let done = false;
 
-		script.src = "https://ajax.googleapis.com/ajax/libs/jquery/" + version + "/jquery.min.js";
+		script.src = 'https://ajax.googleapis.com/ajax/libs/jquery/' + version + '/jquery.min.js';
 		script.onload = script.onreadystatechange = function(){
-			if (!done && (!this.readyState || this.readyState == "loaded" || this.readyState == "complete")) {
+			if (!done && (!this.readyState || this.readyState == 'loaded' || this.readyState == 'complete')) {
 				done = true;
 				init();
 			}
 		};
 
-		document.getElementsByTagName("head")[0].appendChild(script);
+		document.getElementsByTagName('head')[0].appendChild(script);
 	} else {
 		init();
 	}
 
+  // makes GET to Heroku server that sends back array of known ad servers
   function loadAdServers() {
     return new Promise((resolve, reject) => {
       return $.ajax({
@@ -33,40 +34,84 @@ javascript:(function(){
     });
   }
 
-  function populateAdOject(adServers) {
-    const aTags = $('a');
-
+  function populateAdObject(adServers) {
     console.log('Searching for ads...');
-    for (let i = 0; i < aTags.length; i++) {
+    findAds(adServers, 'a');
+    findAds(adServers, 'iframe');
+  }
+
+  //currently configured to work only with anchor and iframe tags
+  function findAds(adServers, tag) {
+    const elements = $(tag);
+
+    for (let i = 0; i < elements.length; i++) {
       for (let j = 0; j < adServers.length; j++) {
-        const aLink = $(aTags[i]).attr('href');
-  
-        if (typeof aLink === 'string' && aLink.includes(adServers[j]) && $(aTags[i]).is(":visible")) {
-          console.log('Ad found!');
-          const a = $(aTags[i]);
-          const img = $(a.children('img')['context']);
-          
+        const el = $(elements[i]);
+        const elLink = el.is('iframe') ? el.attr('src') : el.attr('href');
+
+        if (typeof elLink === 'string' && elLink.includes(adServers[j]) && el.is(':visible')) {
+          console.log('Found an ad!');
+          const img = $(el.children('img')['context']) || '';
+
           if (img) {
             const height = img.height();
             const width = img.width();
-            const position = img.position();
+            const position = img.offset();
             const adData = {
               height,
               width,
               position,
             };
 
-            adObj["advertisements"].push(adData);
+            persistData(adData);
+            adObj['advertisements'].push(adData);
+          } else {
+            const height = el.height();
+            const width = el.width();
+            const position = el.offset();
+            const adData = {
+              height,
+              width,
+              position,
+            };
+
+            persistData(adData);
+            adObj['advertisements'].push(adData);
           }
         }
       }
     }
   }
 
+  function loadFirebase() {
+    $('body').append(`
+      <script src='https://www.gstatic.com/firebasejs/3.6.4/firebase.js'></script>
+      <script>
+        // Initialize Firebase
+        var config = {
+          apiKey: 'AIzaSyDjZN_e1bdMetpBqoPJESgoLTC4Nfc7dW0',
+          authDomain: 'videoamp-fd39e.firebaseapp.com',
+          databaseURL: 'https://videoamp-fd39e.firebaseio.com',
+          storageBucket: 'videoamp-fd39e.appspot.com',
+          messagingSenderId: '235186338274'
+        };
+        firebase.initializeApp(config);
+      </script>
+    `);
+  }
+
+  function persistData(adData) {
+    const url = adObj['location'].replace(/[.#$[\]/\\]/gi, '');
+    const Ads = firebase.database().ref(`/ads/${url}`);
+    const newAd = Ads.push();
+    newAd.set(adData);
+  }
+
   function init() {
     loadAdServers()
     .then((adServers) => {
-      populateAdOject(adServers);
+      loadFirebase();
+      populateAdObject(adServers);
       console.log('Completed search for ads.');
       console.log(JSON.stringify(adObj, null, '  '));
     })
