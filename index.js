@@ -100,7 +100,7 @@ javascript:(function() {
                         persistData(adData);
                         adObj.advertisements.push(adData);
                     }
-                    continue;
+                    break;
                 }
             }
         }
